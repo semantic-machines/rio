@@ -41,7 +41,7 @@ use std::str;
 pub struct TurtleParser<R: BufRead> {
     read: LookAheadLineBasedByteReader<R>,
     base_iri: Option<Iri<String>>,
-    namespaces: HashMap<String, String>,
+    pub namespaces: HashMap<String, String>,
     bnode_id_generator: BlankNodeIdGenerator,
     subject_buf_stack: StringBufferStack,
     subject_type_stack: Vec<NamedOrBlankNodeType>,
