@@ -1,4 +1,5 @@
 use rio_api::iri::IriParseError;
+use rio_api::language_tag::LanguageTagParseError;
 use rio_api::parser::{LineBytePosition, ParseError};
 use std::char;
 use std::error::Error;
@@ -21,11 +22,18 @@ pub enum TurtleErrorKind {
     PrematureEOF,
     UnexpectedByte(u8),
     InvalidUnicodeCodePoint(u32),
-    InvalidIri(IriParseError),
+    InvalidIri {
+        iri: String,
+        error: IriParseError,
+    },
+    InvalidLanguageTag {
+        tag: String,
+        error: LanguageTagParseError,
+    },
 }
 
 impl fmt::Display for TurtleError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {
             TurtleErrorKind::IO(error) => return error.fmt(f),
             TurtleErrorKind::UnknownPrefix(prefix) => write!(f, "unknown prefix '{}'", prefix),
@@ -37,14 +45,19 @@ impl fmt::Display for TurtleError {
             TurtleErrorKind::InvalidUnicodeCodePoint(point) => {
                 write!(f, "invalid unicode code point '{}'", point)
             }
-            TurtleErrorKind::InvalidIri(error) => error.fmt(f),
+            TurtleErrorKind::InvalidIri { iri, error } => {
+                write!(f, "error while parsing IRI '{}': {}", iri, error)
+            }
+            TurtleErrorKind::InvalidLanguageTag { tag, error } => {
+                write!(f, "error while parsing language tag '{}': {}", tag, error)
+            }
         }?;
         if let Some(position) = self.position {
             write!(
                 f,
                 " on line {} at position {}",
-                position.line_number() + 1,
-                position.byte_number() + 1
+                position.line_number(),
+                position.byte_number(),
             )?;
         }
         Ok(())
@@ -55,7 +68,8 @@ impl Error for TurtleError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.kind {
             TurtleErrorKind::IO(error) => Some(error),
-            TurtleErrorKind::InvalidIri(error) => Some(error),
+            TurtleErrorKind::InvalidIri { error, .. } => Some(error),
+            TurtleErrorKind::InvalidLanguageTag { error, .. } => Some(error),
             _ => None,
         }
     }

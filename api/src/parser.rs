@@ -1,5 +1,7 @@
 //! Interfaces for RDF parsers.
 
+#[cfg(feature = "generalized")]
+pub use crate::generalized::parser::*;
 use crate::model::{Quad, Triple};
 use std::error::Error;
 
@@ -12,7 +14,7 @@ pub trait TriplesParser: Sized {
     /// May fail on errors caused by the parser itself or by the callback function ``on_triple``.
     fn parse_all<E: From<Self::Error>>(
         &mut self,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         while !self.is_end() {
             self.parse_step(on_triple)?;
@@ -28,7 +30,7 @@ pub trait TriplesParser: Sized {
     /// It may fail on errors caused by the parser itself or by the callback function ``on_triple``.
     fn parse_step<E: From<Self::Error>>(
         &mut self,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E>;
 
     /// Returns `true` if the file has been completely consumed by the parser.
@@ -37,7 +39,7 @@ pub trait TriplesParser: Sized {
     /// Converts the parser into a `Result<T, E>` iterator.
     ///
     /// `convert_triple` is a function converting Rio [`Triple`](../model/struct.Triple.html) to `T`.
-    fn into_iter<T, E: From<Self::Error>, F: FnMut(Triple) -> Result<T, E>>(
+    fn into_iter<T, E: From<Self::Error>, F: FnMut(Triple<'_>) -> Result<T, E>>(
         self,
         convert_triple: F,
     ) -> TriplesParserIterator<T, E, F, Self> {
@@ -53,7 +55,7 @@ pub trait TriplesParser: Sized {
 pub struct TriplesParserIterator<
     T,
     E: From<P::Error>,
-    F: FnMut(Triple) -> Result<T, E>,
+    F: FnMut(Triple<'_>) -> Result<T, E>,
     P: TriplesParser,
 > {
     parser: P,
@@ -61,7 +63,7 @@ pub struct TriplesParserIterator<
     convert_triple: F,
 }
 
-impl<T, E: From<P::Error>, F: FnMut(Triple) -> Result<T, E>, P: TriplesParser> Iterator
+impl<T, E: From<P::Error>, F: FnMut(Triple<'_>) -> Result<T, E>, P: TriplesParser> Iterator
     for TriplesParserIterator<T, E, F, P>
 {
     type Item = Result<T, E>;
@@ -96,7 +98,7 @@ pub trait QuadsParser: Sized {
     /// May fail on errors caused by the parser itself or by the callback function ``on_quad``.
     fn parse_all<E: From<Self::Error>>(
         &mut self,
-        on_quad: &mut impl FnMut(Quad) -> Result<(), E>,
+        on_quad: &mut impl FnMut(Quad<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         while !self.is_end() {
             self.parse_step(on_quad)?
@@ -112,7 +114,7 @@ pub trait QuadsParser: Sized {
     /// May fail on errors caused by the parser itself or by the callback function ``on_quad``.
     fn parse_step<E: From<Self::Error>>(
         &mut self,
-        on_quad: &mut impl FnMut(Quad) -> Result<(), E>,
+        on_quad: &mut impl FnMut(Quad<'_>) -> Result<(), E>,
     ) -> Result<(), E>;
 
     /// Returns `true` if the file has been completely consumed by the parser.
@@ -121,7 +123,7 @@ pub trait QuadsParser: Sized {
     /// Converts the parser into a `Result<T, E>` iterator.
     ///
     /// `convert_triple` is a function converting Rio [`Triple`](../model/struct.Triple.html) to `T`.
-    fn into_iter<T, E: From<Self::Error>, F: FnMut(Quad) -> Result<T, E>>(
+    fn into_iter<T, E: From<Self::Error>, F: FnMut(Quad<'_>) -> Result<T, E>>(
         self,
         convert_quad: F,
     ) -> QuadsParserIterator<T, E, F, Self> {
@@ -134,14 +136,18 @@ pub trait QuadsParser: Sized {
 }
 
 /// Created with the method [`into_iter`](trait.QuadsParser.html#method.into_iter).
-pub struct QuadsParserIterator<T, E: From<P::Error>, F: FnMut(Quad) -> Result<T, E>, P: QuadsParser>
-{
+pub struct QuadsParserIterator<
+    T,
+    E: From<P::Error>,
+    F: FnMut(Quad<'_>) -> Result<T, E>,
+    P: QuadsParser,
+> {
     parser: P,
     buffer: Vec<T>,
     convert_quad: F,
 }
 
-impl<T, E: From<P::Error>, F: FnMut(Quad) -> Result<T, E>, P: QuadsParser> Iterator
+impl<T, E: From<P::Error>, F: FnMut(Quad<'_>) -> Result<T, E>, P: QuadsParser> Iterator
     for QuadsParserIterator<T, E, F, P>
 {
     type Item = Result<T, E>;
@@ -180,7 +186,7 @@ pub struct LineBytePosition {
 }
 
 impl LineBytePosition {
-    /// Creates a new position where `line_number` and `byte_number` are both starting from zero
+    /// Creates a new position where `line_number` and `byte_number` are both starting from 1
     pub fn new(line_number: usize, byte_number: usize) -> Self {
         Self {
             line_number,

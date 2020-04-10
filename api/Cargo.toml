@@ -1,6 +1,6 @@
 [package]
 name = "rio_api"
-version = "0.3.1"
+version = "0.4.2"
 authors = ["Tpt <thomas@pellissier-tanon.fr>"]
 license = "Apache-2.0"
 readme = "../README.md"
@@ -10,3 +10,7 @@ description = """
 Common data structures for RDF formats parsers and serializers
 """
 edition = "2018"
+
+[features]
+default = []
+generalized = []

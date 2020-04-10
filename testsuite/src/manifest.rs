@@ -126,7 +126,7 @@ impl<R: Fn(&str) -> Result<OwnedDataset, Box<dyn Error>>> Iterator for TestManif
                                 self.manifests_to_do.extend(
                                     RdfListIterator::iter(&self.graph, list.clone().into())
                                         .filter_map(|m| match m {
-                                            OwnedTerm::NamedNode(nm) => Some(nm.iri.clone()),
+                                            OwnedTerm::NamedNode(nm) => Some(nm.iri),
                                             _ => None,
                                         }),
                                 );
@@ -176,7 +176,7 @@ pub enum TestManifestError {
 }
 
 impl fmt::Display for TestManifestError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             TestManifestError::InvalidTestType(t) => {
                 write!(f, "The test {} has an unsupported or missing rdf:type", t)

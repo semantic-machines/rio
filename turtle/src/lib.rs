@@ -2,6 +2,8 @@
 //!
 //! All the provided parsers work in streaming from a `BufRead` implementation.
 //! They do not rely on any dependencies outside of Rust standard library.
+//! The parsers are not protected against memory overflows.
+//! For example if the parsed content contains a literal string of 16GB, 16GB of memory will be allocated.
 //!
 //! How to read a file `foo.ttl` and count the number of `rdf:type` triples:
 //! ```no_run
@@ -24,6 +26,16 @@
 //! Replace `TurtleParser` by `NTriplesParser`, `NQuadsParser` or `TriGParser` to read a N-Triples, N-Quads or TriG file instead.
 //!
 //! `NTriplesParser` and `NQuadsParser` do not use the second argument of the `new` function that is the IRI of the file.
+#![deny(
+    future_incompatible,
+    nonstandard_style,
+    rust_2018_idioms,
+    missing_copy_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unsafe_code,
+    unused_qualifications
+)]
 
 mod error;
 mod formatters;
@@ -31,6 +43,9 @@ mod ntriples;
 mod shared;
 mod turtle;
 mod utils;
+
+#[cfg(feature = "generalized")]
+mod gtrig;
 
 pub use error::TurtleError;
 pub use formatters::NQuadsFormatter;
@@ -41,3 +56,6 @@ pub use ntriples::NQuadsParser;
 pub use ntriples::NTriplesParser;
 pub use turtle::TriGParser;
 pub use turtle::TurtleParser;
+
+#[cfg(feature = "generalized")]
+pub use gtrig::GTriGParser;

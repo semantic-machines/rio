@@ -3,9 +3,11 @@ use crate::manifest::{Test, TestManifestError};
 use crate::model::OwnedDataset;
 use crate::report::{TestOutcome, TestResult};
 use chrono::Utc;
-use rio_api::parser::{QuadsParser, TriplesParser};
-use rio_turtle::{NQuadsParser, NTriplesParser, TriGParser, TurtleParser};
+use rio_api::model::*;
+use rio_api::parser::*;
+use rio_turtle::*;
 use rio_xml::RdfXmlParser;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::fs::File;
@@ -63,7 +65,7 @@ pub fn evaluate_parser_tests(
                                 },
                             }
                         } else {
-                            Err(TestManifestError::InvalidTestResult(test.id.clone()))?
+                            return Err(TestManifestError::InvalidTestResult(test.id.clone()).into())
                         }
                     }
                     Err(e) => TestOutcome::Failed {
@@ -71,7 +73,7 @@ pub fn evaluate_parser_tests(
                     },
                 }
             } else {
-                Err(TestManifestError::InvalidTestType(test.kind.clone()))?
+                return Err(TestManifestError::InvalidTestType(test.kind.clone()).into())
             };
             Ok(TestResult {
                 test: test.id,
@@ -135,6 +137,36 @@ pub fn parse_w3c_rdf_test_file(
     }
 }
 
+#[cfg(feature = "generalized")]
+pub fn parse_w3c_rdf_test_file_for_gtrig(
+    url: &str,
+    tests_path: &Path,
+) -> Result<OwnedDataset, Box<dyn Error>> {
+    let read = read_w3c_rdf_test_file(url, tests_path)?;
+
+    if url.ends_with(".nt") {
+        NTriplesParser::new(read)?
+            .into_iter(|t| Ok(t.into()))
+            .collect()
+    } else if url.ends_with(".nq") {
+        NQuadsParser::new(read)?
+            .into_iter(|t| Ok(t.into()))
+            .collect()
+    } else if url.ends_with(".ttl") {
+        TurtleParser::new(read, url)?
+            .into_iter(|t| Ok(t.into()))
+            .collect()
+    } else if url.ends_with(".trig") {
+        GTriGParser::new(read, url)?
+            .into_iter(|t| Ok(Quad::try_from(t)?.into()))
+            .collect()
+    } else {
+        Err(Box::new(TestEvaluationError::UnsupportedFormat(
+            url.to_owned(),
+        )))
+    }
+}
+
 #[derive(Debug)]
 pub enum TestEvaluationError {
     UnknownTestUrl(String),
@@ -143,7 +175,7 @@ pub enum TestEvaluationError {
 }
 
 impl fmt::Display for TestEvaluationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             TestEvaluationError::UnknownTestUrl(u) => {
                 write!(f, "The URL {} does not corresponds to a known RDF test", u)

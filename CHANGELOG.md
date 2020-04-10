@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.2] - 2020-04-04
+- Normalizes all language tags to lowercase in the `rio_turtle` and `rio_xml` crates.
+- Introduces the `LanguageTag` struct to parse and normalize case of language tags.
+- Fixes Turtle parsing when the parser look ahead needs to span multiple lines.
+- Makes `Iri` implement `AsRef<str>` and `FromStr`.
+
+## [0.4.1] - 2020-03-19
+- Makes `Iri` allow resolving against base IRIs with not hierarchical path (like `file:foo`).
+- Upgrades `quick-xml` dependency to 0.18.
+
+## [0.4.0] - 2020-01-07
+- Adds "generalized" RDF support and generalized Trig parser behind a "generalized" feature flag.
+- Allows to recover NTriples and NQuads parser errors, the parser jumps to the next line if the current line parsing fail.
+- Makes `Iri` parser do the full IRI validation.
+
 ## [0.3.1] - 2019-09-02
 
 ### Added

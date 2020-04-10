@@ -9,6 +9,7 @@ use crate::error::RdfXmlError;
 use crate::model::*;
 use quick_xml::events::attributes::Attribute;
 use rio_api::iri::Iri;
+use rio_api::language_tag::LanguageTag;
 use std::collections::HashSet;
 
 /// A [RDF XML](https://www.w3.org/TR/rdf-syntax-grammar/) streaming parser.
@@ -86,7 +87,7 @@ impl<R: BufRead> TriplesParser for RdfXmlParser<R> {
 
     fn parse_step<E: From<RdfXmlError>>(
         &mut self,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         let (_, event) = self
             .reader
@@ -165,11 +166,11 @@ enum RdfXmlState {
     },
     RDF {
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
     },
     NodeElt {
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         subject: OwnedNamedOrBlankNode,
         li_counter: usize,
     },
@@ -177,7 +178,7 @@ enum RdfXmlState {
         //Resource, Literal or Empty property element
         iri: String,
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         subject: OwnedNamedOrBlankNode,
         object: Option<NodeOrText>,
         id_attr: Option<OwnedNamedNode>,
@@ -186,7 +187,7 @@ enum RdfXmlState {
     ParseTypeCollectionPropertyElt {
         iri: String,
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         subject: OwnedNamedOrBlankNode,
         objects: Vec<OwnedNamedOrBlankNode>,
         id_attr: Option<OwnedNamedNode>,
@@ -194,7 +195,7 @@ enum RdfXmlState {
     ParseTypeLiteralPropertyElt {
         iri: String,
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         subject: OwnedNamedOrBlankNode,
         writer: Writer<Vec<u8>>,
         id_attr: Option<OwnedNamedNode>,
@@ -203,7 +204,7 @@ enum RdfXmlState {
 }
 
 impl RdfXmlState {
-    fn base_iri(&self) -> &Option<Iri<String>> {
+    fn base_iri(&self) -> Option<&Iri<String>> {
         match self {
             RdfXmlState::Doc { base_iri, .. } => base_iri,
             RdfXmlState::RDF { base_iri, .. } => base_iri,
@@ -212,9 +213,10 @@ impl RdfXmlState {
             RdfXmlState::ParseTypeCollectionPropertyElt { base_iri, .. } => base_iri,
             RdfXmlState::ParseTypeLiteralPropertyElt { base_iri, .. } => base_iri,
         }
+        .as_ref()
     }
 
-    fn language(&self) -> Option<&String> {
+    fn language(&self) -> Option<&LanguageTag<String>> {
         match self {
             RdfXmlState::Doc { .. } => None,
             RdfXmlState::RDF { language, .. } => language.as_ref(),
@@ -239,7 +241,7 @@ impl<R: BufRead> RdfXmlReader<R> {
     fn parse_start_event<E: From<RdfXmlError>>(
         &mut self,
         event: BytesStart<'_>,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         //Literal case
         if let Some(RdfXmlState::ParseTypeLiteralPropertyElt { writer, .. }) = self.state.last_mut()
@@ -277,7 +279,7 @@ impl<R: BufRead> RdfXmlReader<R> {
         let (mut language, mut base_iri) = if let Some(current_state) = self.state.last() {
             (
                 current_state.language().cloned(),
-                current_state.base_iri().clone(),
+                current_state.base_iri().cloned(),
             )
         } else {
             (None, None)
@@ -297,9 +299,13 @@ impl<R: BufRead> RdfXmlReader<R> {
             match attribute.key {
                 b"xml:lang" => {
                     language = Some(
-                        attribute
-                            .unescape_and_decode_value(&self.reader)
-                            .map_err(RdfXmlError::from)?,
+                        LanguageTag::parse(
+                            attribute
+                                .unescape_and_decode_value(&self.reader)
+                                .map_err(RdfXmlError::from)?
+                                .to_ascii_lowercase(),
+                        )
+                        .map_err(RdfXmlError::from)?,
                     );
                 }
                 b"xml:base" => {
@@ -593,7 +599,7 @@ impl<R: BufRead> RdfXmlReader<R> {
     fn parse_end_event<E: From<RdfXmlError>>(
         &mut self,
         event: BytesEnd<'_>,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         //Literal case
         if self.in_literal_depth > 0 {
@@ -661,16 +667,16 @@ impl<R: BufRead> RdfXmlReader<R> {
         &mut self,
         iri: OwnedNamedNode,
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         id_attr: Option<OwnedNamedNode>,
         node_id_attr: Option<OwnedBlankNode>,
         about_attr: Option<OwnedNamedNode>,
         type_attr: Option<OwnedNamedNode>,
         property_attrs: Vec<(OwnedNamedNode, String)>,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<RdfXmlState, E> {
         let subject_id = self.bnode_id_generator.generate(); //TODO: avoid to run it everytime
-        let subject: NamedOrBlankNode = match (&id_attr, &node_id_attr, &about_attr) {
+        let subject: NamedOrBlankNode<'_> = match (&id_attr, &node_id_attr, &about_attr) {
             (Some(id_attr), None, None) => NamedNode::from(id_attr).into(),
             (None, Some(node_id_attr), None) => BlankNode::from(node_id_attr).into(),
             (None, None, Some(about_attr)) => NamedNode::from(about_attr).into(),
@@ -727,10 +733,10 @@ impl<R: BufRead> RdfXmlReader<R> {
         &mut self,
         iri: OwnedNamedNode,
         base_iri: Option<Iri<String>>,
-        language: Option<String>,
+        language: Option<LanguageTag<String>>,
         subject: OwnedNamedOrBlankNode,
         id_attr: Option<OwnedNamedNode>,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<RdfXmlState, E> {
         let object_id = self.bnode_id_generator.generate();
         let object = BlankNode {
@@ -756,7 +762,7 @@ impl<R: BufRead> RdfXmlReader<R> {
     fn end_state<E: From<RdfXmlError>>(
         &mut self,
         state: RdfXmlState,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         match state {
             RdfXmlState::PropertyElt {
@@ -768,7 +774,7 @@ impl<R: BufRead> RdfXmlReader<R> {
                 object,
                 ..
             } => {
-                let object: Term = match &object {
+                let object: Term<'_> = match &object {
                     Some(NodeOrText::Node(node)) => NamedOrBlankNode::from(node).into(),
                     Some(NodeOrText::Text(text)) => {
                         self.new_literal(text, &language, &datatype_attr).into()
@@ -878,7 +884,7 @@ impl<R: BufRead> RdfXmlReader<R> {
     fn new_literal<'a>(
         &self,
         value: &'a str,
-        language: &'a Option<String>,
+        language: &'a Option<LanguageTag<String>>,
         datatype: &'a Option<OwnedNamedNode>,
     ) -> Literal<'a> {
         if let Some(datatype) = datatype {
@@ -887,7 +893,10 @@ impl<R: BufRead> RdfXmlReader<R> {
                 datatype: datatype.into(),
             }
         } else if let Some(language) = language {
-            Literal::LanguageTaggedString { value, language }
+            Literal::LanguageTaggedString {
+                value,
+                language: language.as_str(),
+            }
         } else {
             Literal::Simple { value }
         }
@@ -895,9 +904,9 @@ impl<R: BufRead> RdfXmlReader<R> {
 
     fn reify<E: From<RdfXmlError>>(
         &self,
-        triple: &Triple,
-        statement_id: NamedOrBlankNode,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        triple: &Triple<'_>,
+        statement_id: NamedOrBlankNode<'_>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         on_triple(Triple {
             subject: statement_id,
@@ -924,10 +933,10 @@ impl<R: BufRead> RdfXmlReader<R> {
 
     fn emit_property_attrs<E: From<RdfXmlError>>(
         &self,
-        subject: NamedOrBlankNode,
+        subject: NamedOrBlankNode<'_>,
         literal_attributes: Vec<(OwnedNamedNode, String)>,
-        language: &Option<String>,
-        on_triple: &mut impl FnMut(Triple) -> Result<(), E>,
+        language: &Option<LanguageTag<String>>,
+        on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
     ) -> Result<(), E> {
         for (literal_predicate, literal_value) in literal_attributes {
             on_triple(Triple {
@@ -936,7 +945,7 @@ impl<R: BufRead> RdfXmlReader<R> {
                 object: if let Some(language) = language {
                     Literal::LanguageTaggedString {
                         value: &literal_value,
-                        language: &language,
+                        language: language.as_str(),
                     }
                 } else {
                     Literal::Simple {
@@ -952,7 +961,7 @@ impl<R: BufRead> RdfXmlReader<R> {
 
 fn convert_iri_attribute<B: BufRead>(
     base_iri: &Option<Iri<String>>,
-    attribute: Attribute,
+    attribute: Attribute<'_>,
     reader: &Reader<B>,
 ) -> Result<OwnedNamedNode, RdfXmlError> {
     let value = attribute.unescaped_value()?;
