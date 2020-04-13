@@ -385,7 +385,7 @@ impl<'a> fmt::Debug for Literal<'a> {
                 f.write_char('"')?;
                 escape(value).try_for_each(|c| f.write_char(c))?;
                 f.write_char('"')?;
-                write!(f, "@{:?}", language)
+                write!(f, "@{}", language)
             }
             Literal::Typed { value, datatype } => {
                 f.write_char('"')?;
