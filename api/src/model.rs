@@ -344,7 +344,7 @@ impl ExactSizeIterator for EscapeRDF {
 
 impl<'a> fmt::Debug for NamedNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<{}>", self.iri)
+        write!(f, "{}", self.iri)
     }
 }
 
@@ -369,7 +369,7 @@ impl<'a> fmt::Debug for Term<'a> {
 
 impl<'a> fmt::Debug for Triple<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {} .", self.subject, self.predicate, self.object)
+        write!(f, "{:?} {:?} {:?} .", self.subject, self.predicate, self.object)
     }
 }
 
@@ -385,13 +385,13 @@ impl<'a> fmt::Debug for Literal<'a> {
                 f.write_char('"')?;
                 escape(value).try_for_each(|c| f.write_char(c))?;
                 f.write_char('"')?;
-                write!(f, "@{}", language)
+                write!(f, "@{:?}", language)
             }
             Literal::Typed { value, datatype } => {
                 f.write_char('"')?;
                 escape(value).try_for_each(|c| f.write_char(c))?;
                 f.write_char('"')?;
-                write!(f, "^^{}", datatype)
+                write!(f, "^^{:?}", datatype)
             }
         }
     }
