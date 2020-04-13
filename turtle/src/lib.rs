@@ -43,6 +43,7 @@ mod ntriples;
 mod shared;
 mod turtle;
 mod utils;
+mod formatter_with_prefixes;
 
 #[cfg(feature = "generalized")]
 mod gtrig;
@@ -56,6 +57,7 @@ pub use ntriples::NQuadsParser;
 pub use ntriples::NTriplesParser;
 pub use turtle::TriGParser;
 pub use turtle::TurtleParser;
+pub use formatter_with_prefixes::TurtleFormatterWithPrefixes;
 
 #[cfg(feature = "generalized")]
 pub use gtrig::GTriGParser;
