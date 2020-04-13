@@ -17,7 +17,7 @@ use std::fmt::Write;
 ///     NamedNode { iri: "http://example.com/foo" }.to_string()
 /// )
 /// ```
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Clone, Copy, Hash)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash)]
 pub struct NamedNode<'a> {
     /// The [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri) itself.
     pub iri: &'a str,
@@ -79,7 +79,7 @@ impl<'a> fmt::Display for BlankNode<'a> {
 ///     Literal::LanguageTaggedString { value: "foo", language: "en" }.to_string()
 /// );
 /// ```
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash)]
+#[derive(Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Literal<'a> {
     /// A [simple literal](https://www.w3.org/TR/rdf11-concepts/#dfn-simple-literal) without datatype or language form.
     Simple {
@@ -129,7 +129,7 @@ impl<'a> fmt::Display for Literal<'a> {
 /// The union of [IRIs](https://www.w3.org/TR/rdf11-concepts/#dfn-iri) and [blank nodes](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
 ///
 /// The default string formatter is returning a N-Triples, Turtle and SPARQL compatible representation.
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash)]
+#[derive(Eq, PartialEq, Clone, Copy, Hash)]
 pub enum NamedOrBlankNode<'a> {
     NamedNode(NamedNode<'a>),
     BlankNode(BlankNode<'a>),
@@ -161,7 +161,7 @@ impl<'a> From<BlankNode<'a>> for NamedOrBlankNode<'a> {
 /// It is the union of [IRIs](https://www.w3.org/TR/rdf11-concepts/#dfn-iri), [blank nodes](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node) and [literals](https://www.w3.org/TR/rdf11-concepts/#dfn-literal).
 ///
 /// The default string formatter is returning a N-Triples, Turtle and SPARQL compatible representation.
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash)]
+#[derive(Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Term<'a> {
     NamedNode(NamedNode<'a>),
     BlankNode(BlankNode<'a>),
@@ -222,7 +222,7 @@ impl<'a> From<NamedOrBlankNode<'a>> for Term<'a> {
 ///     }.to_string()
 /// )
 /// ```
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Eq, PartialEq, Clone, Hash)]
 pub struct Triple<'a> {
     pub subject: NamedOrBlankNode<'a>,
     pub predicate: NamedNode<'a>,
@@ -336,6 +336,63 @@ impl ExactSizeIterator for EscapeRDF {
             EscapeRdfState::Done => 0,
             EscapeRdfState::Char(_) => 1,
             EscapeRdfState::Backslash(_) => 2,
+        }
+    }
+}
+
+///////////////////
+
+impl<'a> fmt::Debug for NamedNode<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<{}>", self.iri)
+    }
+}
+
+impl<'a> fmt::Debug for NamedOrBlankNode<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NamedOrBlankNode::NamedNode(node) => node.fmt(f),
+            NamedOrBlankNode::BlankNode(node) => node.fmt(f),
+        }
+    }
+}
+
+impl<'a> fmt::Debug for Term<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Term::NamedNode(node) => node.fmt(f),
+            Term::BlankNode(node) => node.fmt(f),
+            Term::Literal(literal) => literal.fmt(f),
+        }
+    }
+}
+
+impl<'a> fmt::Debug for Triple<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} {} .", self.subject, self.predicate, self.object)
+    }
+}
+
+impl<'a> fmt::Debug for Literal<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Simple { value } => {
+                f.write_char('"')?;
+                escape(value).try_for_each(|c| f.write_char(c))?;
+                f.write_char('"')
+            }
+            Literal::LanguageTaggedString { value, language } => {
+                f.write_char('"')?;
+                escape(value).try_for_each(|c| f.write_char(c))?;
+                f.write_char('"')?;
+                write!(f, "@{}", language)
+            }
+            Literal::Typed { value, datatype } => {
+                f.write_char('"')?;
+                escape(value).try_for_each(|c| f.write_char(c))?;
+                f.write_char('"')?;
+                write!(f, "^^{}", datatype)
+            }
         }
     }
 }
