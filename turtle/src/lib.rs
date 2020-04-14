@@ -52,7 +52,6 @@ pub use formatters::NQuadsFormatter;
 pub use formatters::NTriplesFormatter;
 pub use formatters::TriGFormatter;
 pub use formatters::TurtleFormatter;
-pub use formatters::TurtleFormatterWithPrefixes;
 pub use ntriples::NQuadsParser;
 pub use ntriples::NTriplesParser;
 pub use turtle::TriGParser;

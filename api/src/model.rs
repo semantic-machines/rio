@@ -344,7 +344,11 @@ impl ExactSizeIterator for EscapeRDF {
 
 impl<'a> fmt::Debug for NamedNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.iri)
+        if self.iri.contains("/") {
+            write!(f, "<{}>", self.iri)
+        } else {
+            write!(f, "{}", self.iri)
+        }
     }
 }
 
