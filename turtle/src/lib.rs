@@ -3,7 +3,7 @@
 //! All the provided parsers work in streaming from a `BufRead` implementation.
 //! They do not rely on any dependencies outside of Rust standard library.
 //! The parsers are not protected against memory overflows.
-//! For example if the parsed content contains a literal string of 16GB, 16GB of memory will be allocated.
+//! For example if the parsed content contains a literal string of 16 GB, 16 GB of memory will be allocated.
 //!
 //! How to read a file `foo.ttl` and count the number of `rdf:type` triples:
 //! ```no_run
@@ -12,20 +12,24 @@
 //! use rio_api::model::NamedNode;
 //! use std::io::BufReader;
 //! use std::fs::File;
+//! use oxiri::Iri;
 //!
 //! let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 //! let mut count = 0;
-//! TurtleParser::new(BufReader::new(File::open("foo.ttl").unwrap()), "file:foo.ttl").unwrap().parse_all(&mut |t| {
+//! TurtleParser::new(BufReader::new(File::open("foo.ttl")?), Some(Iri::parse("file:foo.ttl".to_owned()).unwrap())).parse_all(&mut |t| {
 //!     if t.predicate == rdf_type {
 //!         count += 1;
 //!     }
 //!     Ok(()) as Result<(), TurtleError>
-//! }).unwrap();
+//! })?;
+//! # Result::<_,TurtleError>::Ok(())
 //! ```
 //!
-//! Replace `TurtleParser` by `NTriplesParser`, `NQuadsParser` or `TriGParser` to read a N-Triples, N-Quads or TriG file instead.
+//! Replace `TurtleParser` by `NTriplesParser`, `NQuadsParser` or `TriGParser` to read an N-Triples, N-Quads or TriG file instead.
 //!
 //! `NTriplesParser` and `NQuadsParser` do not use the second argument of the `new` function that is the IRI of the file.
+//!
+//! [Sophia](https://crates.io/crates/sophia_api) adapters for Rio parsers are provided if the `sophia` feature is enabled.
 #![deny(
     future_incompatible,
     nonstandard_style,
@@ -36,6 +40,7 @@
     unsafe_code,
     unused_qualifications
 )]
+#![doc(test(attr(deny(warnings))))]
 
 mod error;
 mod formatters;
@@ -59,3 +64,6 @@ pub use turtle::TurtleParser;
 
 #[cfg(feature = "generalized")]
 pub use gtrig::GTriGParser;
+
+#[cfg(feature = "sophia_api")]
+mod sophia;

@@ -1,10 +1,10 @@
 [package]
 name = "rio_testsuite"
-version = "0.4.2"
+version = "0.5.2"
 authors = ["Tpt <thomas@pellissier-tanon.fr>"]
 license = "Apache-2.0"
 readme = "../README.md"
-repository = "https://github.com/Tpt/rio"
+repository = "https://github.com/oxigraph/rio"
 description = """
 W3C testsuite evaluator for Rio parsers
 """
@@ -12,10 +12,11 @@ edition = "2018"
 publish = false
 
 [dependencies]
-rio_api = "0.4"
-rio_turtle = "0.4"
-rio_xml = "0.4"
+rio_api = { version = "0.5", path="../api" }
+rio_turtle = { version = "0.5", path="../turtle" }
+rio_xml = { version = "0.5", path="../xml" }
 chrono = "0.4"
+oxiri = "0.1"
 permutohedron = "0.2"
 
 [dev-dependencies]
@@ -27,8 +28,4 @@ generalized = ["rio_api/generalized", "rio_turtle/generalized"]
 
 [[bench]]
 name = "w3c_testsuite"
-harness = false
-
-[[bench]]
-name = "iri"
 harness = false

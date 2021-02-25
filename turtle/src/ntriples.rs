@@ -16,7 +16,7 @@ use std::io::BufRead;
 /// if a line significantly longer than the previous is encountered.
 ///
 ///
-/// Count the number of of people using the `TriplesParser` API:
+/// Count the number of people using the `TriplesParser` API:
 /// ```
 /// use rio_turtle::{NTriplesParser, TurtleError};
 /// use rio_api::parser::TriplesParser;
@@ -30,13 +30,14 @@ use std::io::BufRead;
 /// let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 /// let schema_person = NamedNode { iri: "http://schema.org/Person" };
 /// let mut count = 0;
-/// NTriplesParser::new(file.as_ref()).unwrap().parse_all(&mut |t| {
+/// NTriplesParser::new(file.as_ref()).parse_all(&mut |t| {
 ///     if t.predicate == rdf_type && t.object == schema_person.into() {
 ///         count += 1;
 ///     }
 ///     Ok(()) as Result<(), TurtleError>
-/// }).unwrap();
-/// assert_eq!(2, count)
+/// })?;
+/// assert_eq!(2, count);
+/// # Result::<_,rio_turtle::TurtleError>::Ok(())
 /// ```
 pub struct NTriplesParser<R: BufRead> {
     read: LookAheadByteReader<R>,
@@ -47,14 +48,14 @@ pub struct NTriplesParser<R: BufRead> {
 }
 
 impl<R: BufRead> NTriplesParser<R> {
-    pub fn new(reader: R) -> Result<Self, TurtleError> {
-        Ok(Self {
+    pub fn new(reader: R) -> Self {
+        Self {
             read: LookAheadByteReader::new(reader),
             subject_buf: String::default(),
             predicate_buf: String::default(),
             object_buf: String::default(),
             object_annotation_buf: String::default(),
-        })
+        }
     }
 }
 
@@ -103,7 +104,7 @@ impl<R: BufRead> TriplesParser for NTriplesParser<R> {
 /// if a line significantly longer than the previous is encountered.
 ///
 ///
-/// Count the number of of people using the `QuadsParser` API:
+/// Count the number of people using the `QuadsParser` API:
 /// ```
 /// use rio_turtle::{NQuadsParser, TurtleError};
 /// use rio_api::parser::QuadsParser;
@@ -117,13 +118,14 @@ impl<R: BufRead> TriplesParser for NTriplesParser<R> {
 /// let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 /// let schema_person = NamedNode { iri: "http://schema.org/Person" };
 /// let mut count = 0;
-/// NQuadsParser::new(file.as_ref()).unwrap().parse_all(&mut |t| {
+/// NQuadsParser::new(file.as_ref()).parse_all(&mut |t| {
 ///     if t.predicate == rdf_type && t.object == schema_person.into() {
 ///         count += 1;
 ///     }
 ///     Ok(()) as Result<(), TurtleError>
-/// }).unwrap();
-/// assert_eq!(2, count)
+/// })?;
+/// assert_eq!(2, count);
+/// # Result::<_,rio_turtle::TurtleError>::Ok(())
 /// ```
 pub struct NQuadsParser<R: BufRead> {
     read: LookAheadByteReader<R>,
@@ -135,15 +137,15 @@ pub struct NQuadsParser<R: BufRead> {
 }
 
 impl<R: BufRead> NQuadsParser<R> {
-    pub fn new(reader: R) -> Result<Self, TurtleError> {
-        Ok(Self {
+    pub fn new(reader: R) -> Self {
+        Self {
             read: LookAheadByteReader::new(reader),
             subject_buf: String::default(),
             predicate_buf: String::default(),
             object_buf: String::default(),
             object_annotation_buf: String::default(),
             graph_name_buf: String::default(),
-        })
+        }
     }
 }
 

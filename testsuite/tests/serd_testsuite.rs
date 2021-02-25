@@ -1,3 +1,4 @@
+use oxiri::Iri;
 use rio_api::parser::{QuadsParser, TriplesParser};
 use rio_testsuite::manifest::TestManifest;
 use rio_testsuite::model::OwnedDataset;
@@ -11,24 +12,25 @@ use std::io::BufReader;
 pub fn parse_rdf_test_file(url: &str) -> Result<OwnedDataset, Box<dyn Error>> {
     let base = env!("CARGO_MANIFEST_DIR").to_owned() + "/serd-tests";
     let read = BufReader::new(
-        File::open(&url.replace("http://drobilla.net/sw/serd/tests", &base))
+        File::open(&url.replace("http://drobilla.net/sw/serd/test", &base))
             .map_err(|e| TestEvaluationError::IO(url.to_owned(), e))?,
     );
+    let base_iri = Iri::parse(url.to_owned())?;
 
     if url.ends_with(".nt") {
-        NTriplesParser::new(read)?
+        NTriplesParser::new(read)
             .into_iter(|t| Ok(t.into()))
             .collect()
     } else if url.ends_with(".nq") {
-        NQuadsParser::new(read)?
+        NQuadsParser::new(read)
             .into_iter(|t| Ok(t.into()))
             .collect()
     } else if url.ends_with(".ttl") {
-        TurtleParser::new(read, url)?
+        TurtleParser::new(read, Some(base_iri))
             .into_iter(|t| Ok(t.into()))
             .collect()
     } else if url.ends_with(".trig") {
-        TriGParser::new(read, url)?
+        TriGParser::new(read, Some(base_iri))
             .into_iter(|t| Ok(t.into()))
             .collect()
     } else {
@@ -56,10 +58,10 @@ fn run_testsuite(manifest_uri: String) -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn serd_good_testsuite() -> Result<(), Box<dyn Error>> {
-    run_testsuite("http://drobilla.net/sw/serd/tests/good/manifest.ttl".to_owned())
+    run_testsuite("http://drobilla.net/sw/serd/test/good/manifest.ttl".to_owned())
 }
 
 #[test]
 fn serd_bad_testsuite() -> Result<(), Box<dyn Error>> {
-    run_testsuite("http://drobilla.net/sw/serd/tests/bad/manifest.ttl".to_owned())
+    run_testsuite("http://drobilla.net/sw/serd/test/bad/manifest.ttl".to_owned())
 }

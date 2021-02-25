@@ -9,7 +9,15 @@
 	mf:entries (
 		<#blank_node_with_linebreak>
 		<#bad_lang>
+		<#language_normalization_ttl>
+		<#language_normalization_xml>
+		<#xml_entities>
 	) .
+
+<#no_end_line_jump>
+	rdf:type rdft:TestNTriplesPositiveSyntax ;
+	mf:name "No line jump at the end of the file" ;
+	mf:action <no_end_line_jump.nt> .
 
 <#blank_node_with_linebreak>
 	rdf:type rdft:TestTurtleEval ;
@@ -17,7 +25,25 @@
 	mf:action <blank_node_with_linebreak.ttl> ;
 	mf:result <blank_node_with_linebreak.nt> .
 
+<#language_normalization_ttl>
+	rdf:type rdft:TestTurtleEval ;
+	mf:name "language case normalization" ;
+	mf:action <language_normalization.ttl> ;
+	mf:result <language_normalization.nt> .
+
+<#language_normalization_xml>
+	rdf:type rdft:TestXMLEval ;
+	mf:name "language case normalization" ;
+	mf:action <language_normalization.rdf> ;
+	mf:result <language_normalization.nt> .
+
 <#bad_lang>
 	rdf:type rdft:TestTurtleNegativeSyntax ;
 	mf:name "bad language tag" ;
 	mf:action <bad_lang.ttl> .
+
+<#xml_entities>
+	rdf:type rdft:TestXMLEval ;
+	mf:name "custom XML entities" ;
+	mf:action <xml_entities.rdf> ;
+	mf:result <xml_entities.nt> .

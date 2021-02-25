@@ -1,8 +1,7 @@
 Rio
 ===
 
-[![actions status](https://github.com/Tpt/rio/workflows/build/badge.svg)](https://github.com/Tpt/rio/actions)
-[![dependency status](https://deps.rs/repo/github/Tpt/rio/status.svg)](https://deps.rs/repo/github/Tpt/rio)
+[![actions status](https://github.com/oxigraph/rio/workflows/build/badge.svg)](https://github.com/oxigraph/rio/actions)
 
 Rio is a low level library which provides conformant and fast parsers and formatters for RDF related file formats.
 
@@ -18,6 +17,8 @@ It is split into multiple crates:
 * `rio_xml` provides a conformant streaming parser and a formatter for [RDF XML](https://www.w3.org/TR/rdf-syntax-grammar/).
   [![Latest Version](https://img.shields.io/crates/v/rio_xml.svg)](https://crates.io/crates/rio_xml)
   [![Released API docs](https://docs.rs/rio_xml/badge.svg)](https://docs.rs/rio_xml)
+
+The disabled by default  `sophia` feature provides [Sophia](https://crates.io/crates/sophia_api) adapters for Rio parsers.
 
 There is also the `rio_testsuite` crate that is used for testing Rio parsers against the [W3C RDF tests](http://w3c.github.io/rdf-tests/) to ensure their conformance.
 It provides both an executable for building implementation reports and integration test to quickly ensure that the parsers stay conformant.

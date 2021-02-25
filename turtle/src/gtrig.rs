@@ -4,7 +4,7 @@ use crate::error::*;
 use crate::shared::*;
 use crate::turtle::*;
 use crate::utils::*;
-use rio_api::iri::Iri;
+use oxiri::Iri;
 use rio_api::model::*;
 use rio_api::parser::GeneralizedQuadsParser;
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ use std::str;
 /// Using it requires to enable the `generalized` feature.
 ///
 ///
-/// Count the number of of people using the `QuadsParser` API:
+/// Count the number of people using the `QuadsParser` API:
 /// ```
 /// use rio_turtle::{GTriGParser, TurtleError};
 /// use rio_api::parser::GeneralizedQuadsParser;
@@ -34,13 +34,14 @@ use std::str;
 /// let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 /// let schema_person = NamedNode { iri: "http://schema.org/Person" };
 /// let mut count = 0;
-/// GTriGParser::new(file.as_ref(), "").unwrap().parse_all(&mut |t| {
+/// GTriGParser::new(file.as_ref(), None).parse_all(&mut |t| {
 ///     if t.predicate == rdf_type.into() && t.object == schema_person.into() {
 ///         count += 1;
 ///     }
 ///     Ok(()) as Result<(), TurtleError>
-/// }).unwrap();
-/// assert_eq!(2, count)
+/// })?;
+/// assert_eq!(2, count);
+/// # Result::<_,rio_turtle::TurtleError>::Ok(())
 /// ```
 pub struct GTriGParser<R: BufRead> {
     read: LookAheadByteReader<R>,
@@ -53,30 +54,17 @@ pub struct GTriGParser<R: BufRead> {
 }
 
 impl<R: BufRead> GTriGParser<R> {
-    /// Builds the parser from a `BufRead` implementation and a base IRI for relative IRI resolution.
-    ///
-    /// The base IRI might be empty to state there is no base IRI.
-    pub fn new(reader: R, base_iri: &str) -> Result<Self, TurtleError> {
-        let read = LookAheadByteReader::new(reader);
-        let base_iri = if base_iri.is_empty() {
-            None
-        } else {
-            Some(Iri::parse(base_iri.to_owned()).map_err(|error| {
-                read.parse_error(TurtleErrorKind::InvalidIri {
-                    iri: base_iri.to_owned(),
-                    error,
-                })
-            })?)
-        };
-        Ok(Self {
-            read,
+    /// Builds the parser from a `BufRead` implementation, and a base IRI for relative IRI resolution.
+    pub fn new(reader: R, base_iri: Option<Iri<String>>) -> Self {
+        Self {
+            read: LookAheadByteReader::new(reader),
             base_iri,
             namespaces: HashMap::default(),
             bnode_id_generator: BlankNodeIdGenerator::default(),
             graph_stack: OwnedTermStack::new(),
             term_stack: OwnedTermStack::new(),
             temp_buf: String::default(),
-        })
+        }
     }
 
     fn make_quad(&self) -> GeneralizedQuad<'_> {
@@ -601,12 +589,12 @@ pub fn parse_generalized_iriref(
     }
 }
 
-pub(crate) fn parse_variable_name<'a>(
+pub(crate) fn parse_variable_name(
     read: &mut impl LookAheadByteRead,
-    buffer: &'a mut String,
+    buffer: &mut String,
 ) -> Result<(), TurtleError> {
     let c = read.required_current()?;
-    if c <= MAX_ASCII && (is_possible_pn_chars_u_ascii(c) || b'0' <= c && c <= b'9') {
+    if c <= MAX_ASCII && (is_possible_pn_chars_u_ascii(c) || (b'0'..=b'9').contains(&c)) {
         buffer.push(char::from(c))
     } else {
         let c = read_utf8_char(read)?;
@@ -621,7 +609,7 @@ pub(crate) fn parse_variable_name<'a>(
         read.consume()?;
         if let Some(c) = read.current() {
             if c <= MAX_ASCII
-                && (is_possible_pn_chars_u_ascii(c) || b'0' <= c && c <= b'9' || c == 0xb7)
+                && (is_possible_pn_chars_u_ascii(c) || (b'0'..=b'9').contains(&c) || c == 0xb7)
             {
                 buffer.push(char::from(c))
             } else {
@@ -785,17 +773,19 @@ mod test {
         let mut got: Vec<(OwnedTerm, OwnedTerm, OwnedTerm, Option<OwnedTerm>)> =
             Vec::with_capacity(expected.len());
 
-        GTriGParser::new(Cursor::new(gtrig), "http://example.org/base/")?.parse_all(
-            &mut |quad| {
-                got.push((
-                    quad.subject.into(),
-                    quad.predicate.into(),
-                    quad.object.into(),
-                    quad.graph_name.map(OwnedTerm::from),
-                ));
-                OK_TURTLE_ERROR
-            },
-        )?;
+        GTriGParser::new(
+            Cursor::new(gtrig),
+            Some(Iri::parse("http://example.org/base/".to_owned()).unwrap()),
+        )
+        .parse_all(&mut |quad| {
+            got.push((
+                quad.subject.into(),
+                quad.predicate.into(),
+                quad.object.into(),
+                quad.graph_name.map(OwnedTerm::from),
+            ));
+            OK_TURTLE_ERROR
+        })?;
 
         assert_eq!(expected, got);
         Ok(())
@@ -812,7 +802,7 @@ mod test {
         let mut got: Vec<(OwnedTerm, OwnedTerm, OwnedTerm, Option<OwnedTerm>)> =
             Vec::with_capacity(expected.len());
 
-        GTriGParser::new(Cursor::new(gtrig), "")?.parse_all(&mut |quad| {
+        GTriGParser::new(Cursor::new(gtrig), None).parse_all(&mut |quad| {
             got.push((
                 quad.subject.into(),
                 quad.predicate.into(),
@@ -841,7 +831,7 @@ mod test {
         let mut got: Vec<(OwnedTerm, OwnedTerm, OwnedTerm, Option<OwnedTerm>)> =
             Vec::with_capacity(expected.len());
 
-        GTriGParser::new(Cursor::new(gtrig), "")?.parse_all(&mut |quad| {
+        GTriGParser::new(Cursor::new(gtrig), None).parse_all(&mut |quad| {
             got.push((
                 quad.subject.into(),
                 quad.predicate.into(),
@@ -874,17 +864,19 @@ mod test {
         let mut got: Vec<(OwnedTerm, OwnedTerm, OwnedTerm, Option<OwnedTerm>)> =
             Vec::with_capacity(expected.len());
 
-        GTriGParser::new(Cursor::new(gtrig), "http://example.org/base/")?.parse_all(
-            &mut |quad| {
-                got.push((
-                    quad.subject.into(),
-                    quad.predicate.into(),
-                    quad.object.into(),
-                    quad.graph_name.map(OwnedTerm::from),
-                ));
-                OK_TURTLE_ERROR
-            },
-        )?;
+        GTriGParser::new(
+            Cursor::new(gtrig),
+            Some(Iri::parse("http://example.org/base/".to_owned()).unwrap()),
+        )
+        .parse_all(&mut |quad| {
+            got.push((
+                quad.subject.into(),
+                quad.predicate.into(),
+                quad.object.into(),
+                quad.graph_name.map(OwnedTerm::from),
+            ));
+            OK_TURTLE_ERROR
+        })?;
 
         assert_eq!(expected, got);
         Ok(())
@@ -899,17 +891,19 @@ mod test {
         let mut got: Vec<(OwnedTerm, OwnedTerm, OwnedTerm, Option<OwnedTerm>)> =
             Vec::with_capacity(2);
 
-        GTriGParser::new(Cursor::new(gtrig), "http://example.org/base/")?.parse_all(
-            &mut |quad| {
-                got.push((
-                    quad.subject.into(),
-                    quad.predicate.into(),
-                    quad.object.into(),
-                    quad.graph_name.map(OwnedTerm::from),
-                ));
-                OK_TURTLE_ERROR
-            },
-        )?;
+        GTriGParser::new(
+            Cursor::new(gtrig),
+            Some(Iri::parse("http://example.org/base/".to_owned()).unwrap()),
+        )
+        .parse_all(&mut |quad| {
+            got.push((
+                quad.subject.into(),
+                quad.predicate.into(),
+                quad.object.into(),
+                quad.graph_name.map(OwnedTerm::from),
+            ));
+            OK_TURTLE_ERROR
+        })?;
 
         assert_eq!(v("p"), got[0].1);
         assert_eq!(v("o1"), got[0].2);

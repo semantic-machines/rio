@@ -1,5 +1,5 @@
-use rio_api::iri::IriParseError;
-use rio_api::language_tag::LanguageTagParseError;
+use oxilangtag::LanguageTagParseError;
+use oxiri::IriParseError;
 use rio_api::parser::{LineBytePosition, ParseError};
 use std::char;
 use std::error::Error;
@@ -86,6 +86,16 @@ impl From<io::Error> for TurtleError {
         Self {
             kind: TurtleErrorKind::IO(error),
             position: None,
+        }
+    }
+}
+
+impl From<TurtleError> for io::Error {
+    fn from(error: TurtleError) -> Self {
+        match error.kind {
+            TurtleErrorKind::IO(error) => error,
+            TurtleErrorKind::PrematureEOF => io::Error::new(io::ErrorKind::UnexpectedEof, error),
+            _ => io::Error::new(io::ErrorKind::InvalidData, error),
         }
     }
 }

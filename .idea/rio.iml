@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/api/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/api/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/api/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/api/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/testsuite/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/turtle/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/turtle/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/turtle/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/turtle/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/xml/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/xml/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/xml/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/xml/benches" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/api/target" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/testsuite/target" />
+      <excludeFolder url="file://$MODULE_DIR$/turtle/target" />
+      <excludeFolder url="file://$MODULE_DIR$/xml/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

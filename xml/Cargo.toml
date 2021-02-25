@@ -1,16 +1,30 @@
 [package]
 name = "rio_xml"
-version = "0.4.2"
+version = "0.5.2"
 authors = ["Tpt <thomas@pellissier-tanon.fr>"]
 license = "Apache-2.0"
 readme = "../README.md"
 keywords = ["RDF", "XML", "parser"]
-repository = "https://github.com/Tpt/rio"
+repository = "https://github.com/oxigraph/rio"
 description = """
 RDF/XML parser and serializer
 """
 edition = "2018"
 
+[package.metadata.docs.rs]
+all-features = true
+
+[features]
+default = []
+sophia = ["rio_api/sophia", "sophia_api"]
+
 [dependencies]
-rio_api = "0.4"
-quick-xml = "0.18"
+oxilangtag = "0.1"
+oxiri = "0.1"
+rio_api = { version = "0.5", path="../api" }
+quick-xml = "0.22"
+sophia_api = { version = "0.6.1", optional = true }
+
+[dev-dependencies.sophia_api]
+version = "0.6.1"
+features = ["test_macro"]

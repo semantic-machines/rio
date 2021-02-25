@@ -5,6 +5,7 @@ use rio_xml::{RdfXmlError, RdfXmlFormatter, RdfXmlParser};
 use std::io::Cursor;
 
 #[test]
+#[allow(clippy::blacklisted_name)]
 fn simple_roundtrip() -> Result<(), RdfXmlError> {
     let foo = NamedNode {
         iri: "http://example.com/foo",
@@ -12,6 +13,10 @@ fn simple_roundtrip() -> Result<(), RdfXmlError> {
     let bar = NamedNode {
         iri: "http://example.com/b%adar",
     };
+    let bad = NamedNode {
+        iri: "http://example.org/properties:p",
+    };
+
     let bnode = BlankNode { id: "foobar" };
     let simple = Literal::Simple { value: "sim\"le" };
     let language = Literal::LanguageTaggedString {
@@ -61,6 +66,11 @@ fn simple_roundtrip() -> Result<(), RdfXmlError> {
             predicate: bar,
             object: bar.into(),
         },
+        Triple {
+            subject: bnode.into(),
+            predicate: bad,
+            object: foo.into(),
+        },
     ];
 
     let mut formatter = RdfXmlFormatter::new(Vec::default())?;
@@ -70,7 +80,7 @@ fn simple_roundtrip() -> Result<(), RdfXmlError> {
     let xml = formatter.finish()?;
 
     let mut count = 0;
-    RdfXmlParser::new(Cursor::new(&xml), "")?.parse_all(&mut |_| {
+    RdfXmlParser::new(Cursor::new(&xml), None).parse_all(&mut |_| {
         count += 1;
         Ok(()) as Result<(), RdfXmlError>
     })?;

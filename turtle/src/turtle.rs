@@ -3,7 +3,7 @@
 use crate::error::*;
 use crate::shared::*;
 use crate::utils::*;
-use rio_api::iri::Iri;
+use oxiri::Iri;
 use rio_api::model::*;
 use rio_api::parser::{QuadsParser, TriplesParser};
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ use std::str;
 /// It implements the `TriplesParser` trait.
 ///
 ///
-/// Count the number of of people using the `TriplesParser` API:
+/// Count the number of people using the `TriplesParser` API:
 /// ```
 /// use rio_turtle::{TurtleParser, TurtleError};
 /// use rio_api::parser::TriplesParser;
@@ -30,18 +30,19 @@ use std::str;
 /// let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 /// let schema_person = NamedNode { iri: "http://schema.org/Person" };
 /// let mut count = 0;
-/// TurtleParser::new(file.as_ref(), "").unwrap().parse_all(&mut |t| {
+/// TurtleParser::new(file.as_ref(), None).parse_all(&mut |t| {
 ///     if t.predicate == rdf_type && t.object == schema_person.into() {
 ///         count += 1;
 ///     }
 ///     Ok(()) as Result<(), TurtleError>
-/// }).unwrap();
-/// assert_eq!(2, count)
+/// })?;
+/// assert_eq!(2, count);
+/// # Result::<_,rio_turtle::TurtleError>::Ok(())
 /// ```
 pub struct TurtleParser<R: BufRead> {
     read: LookAheadByteReader<R>,
     base_iri: Option<Iri<String>>,
-    pub namespaces: HashMap<String, String>,
+    namespaces: HashMap<String, String>,
     bnode_id_generator: BlankNodeIdGenerator,
     subject_buf_stack: StringBufferStack,
     subject_type_stack: Vec<NamedOrBlankNodeType>,
@@ -51,23 +52,10 @@ pub struct TurtleParser<R: BufRead> {
 }
 
 impl<R: BufRead> TurtleParser<R> {
-    /// Builds the parser from a `BufRead` implementation and a base IRI for relative IRI resolution.
-    ///
-    /// The base IRI might be empty to state there is no base IRI.
-    pub fn new(reader: R, base_iri: &str) -> Result<Self, TurtleError> {
-        let read = LookAheadByteReader::new(reader);
-        let base_iri = if base_iri.is_empty() {
-            None
-        } else {
-            Some(Iri::parse(base_iri.to_owned()).map_err(|error| {
-                read.parse_error(TurtleErrorKind::InvalidIri {
-                    iri: base_iri.to_owned(),
-                    error,
-                })
-            })?)
-        };
-        Ok(Self {
-            read,
+    /// Builds the parser from a `BufRead` implementation, and a base IRI for relative IRI resolution.
+    pub fn new(reader: R, base_iri: Option<Iri<String>>) -> Self {
+        Self {
+            read: LookAheadByteReader::new(reader),
             base_iri,
             namespaces: HashMap::default(),
             bnode_id_generator: BlankNodeIdGenerator::default(),
@@ -76,7 +64,7 @@ impl<R: BufRead> TurtleParser<R> {
             predicate_buf_stack: StringBufferStack::default(),
             object_annotation_buf: String::default(),
             temp_buf: String::default(),
-        })
+        }
     }
 }
 
@@ -100,7 +88,7 @@ impl<R: BufRead> TriplesParser for TurtleParser<R> {
 /// It implements the `QuadsParser` trait.
 ///
 ///
-/// Count the number of of people using the `QuadsParser` API:
+/// Count the number of people using the `QuadsParser` API:
 /// ```
 /// use rio_turtle::{TriGParser, TurtleError};
 /// use rio_api::parser::QuadsParser;
@@ -117,13 +105,14 @@ impl<R: BufRead> TriplesParser for TurtleParser<R> {
 /// let rdf_type = NamedNode { iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" };
 /// let schema_person = NamedNode { iri: "http://schema.org/Person" };
 /// let mut count = 0;
-/// TriGParser::new(file.as_ref(), "").unwrap().parse_all(&mut |t| {
+/// TriGParser::new(file.as_ref(), None).parse_all(&mut |t| {
 ///     if t.predicate == rdf_type && t.object == schema_person.into() {
 ///         count += 1;
 ///     }
 ///     Ok(()) as Result<(), TurtleError>
-/// }).unwrap();
-/// assert_eq!(2, count)
+/// })?;
+/// assert_eq!(2, count);
+/// # Result::<_, TurtleError>::Ok(())
 /// ```
 pub struct TriGParser<R: BufRead> {
     inner: TurtleParser<R>,
@@ -131,14 +120,12 @@ pub struct TriGParser<R: BufRead> {
 }
 
 impl<R: BufRead> TriGParser<R> {
-    /// Builds the parser from a `BufRead` implementation and a base IRI for relative IRI resolution.
-    ///
-    /// The base IRI might be empty to state there is no base URL.
-    pub fn new(reader: R, base_iri: &str) -> Result<Self, TurtleError> {
-        Ok(Self {
-            inner: TurtleParser::new(reader, base_iri)?,
+    /// Builds the parser from a `BufRead` implementation, and a base IRI for relative IRI resolution.
+    pub fn new(reader: R, base_iri: Option<Iri<String>>) -> Self {
+        Self {
+            inner: TurtleParser::new(reader, base_iri),
             graph_name_buf: String::default(),
-        })
+        }
     }
 }
 
@@ -718,8 +705,8 @@ fn parse_object<R: BufRead, E: From<TurtleError>>(
     Ok(())
 }
 
-fn emit_triple<'a, R: BufRead, E: From<TurtleError>>(
-    parser: &'a TurtleParser<R>,
+fn emit_triple<R: BufRead, E: From<TurtleError>>(
+    parser: &TurtleParser<R>,
     object_type: TermType,
     on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
 ) -> Result<(), E> {

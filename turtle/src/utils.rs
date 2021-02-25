@@ -31,15 +31,15 @@ pub trait LookAheadByteRead {
     fn consume_many(&mut self, count: usize) -> Result<(), TurtleError>;
 
     /// Returns the line number of the current byte starting at 1
-    fn line_number(&self) -> usize;
+    fn line_number(&self) -> u64;
 
     /// Returns the byte number of the current byte in the line starting at 1
-    fn byte_number(&self) -> usize;
+    fn byte_number(&self) -> u64;
 
     /// Returns if the current buffer starts with a given byte string. Does not work cross line boundaries
     fn starts_with(&mut self, prefix: &[u8]) -> bool;
 
-    /// Returns if the current buffer starts with a given byte string in a ASCII case insensitive manner.
+    /// Returns if the current buffer starts with a given byte string in an ASCII case insensitive manner.
     /// Does not work cross line boundaries
     fn starts_with_ignore_ascii_case(&mut self, prefix: &[u8]) -> bool;
 
@@ -70,21 +70,22 @@ pub trait LookAheadByteRead {
 
     fn consume_line_end(&mut self) -> Result<(), TurtleError> {
         loop {
-            if let Some(b'\n') | None = self.current() {
-                return self.consume();
+            match self.current() {
+                None => return Ok(()),
+                Some(b'\n') => return self.consume(),
+                _ => self.consume()?,
             }
-            self.consume()?;
         }
     }
 }
 
-/// Reads the file in a streaming way
+/// Reads the file in streaming
 pub struct LookAheadByteReader<R: Read> {
     inner: R,
     buffer: VecDeque<u8>,
     current: Option<u8>,
-    line_number: usize,
-    byte_number: usize,
+    line_number: u64,
+    byte_number: u64,
 }
 
 const DEFAULT_CAPACITY: usize = 8 * 1024;
@@ -174,6 +175,8 @@ impl<R: BufRead> LookAheadByteRead for LookAheadByteReader<R> {
                 } else {
                     self.byte_number += 1;
                 }
+            } else {
+                return Err(self.parse_error(TurtleErrorKind::PrematureEOF));
             }
         }
         if self.buffer.is_empty() {
@@ -183,11 +186,11 @@ impl<R: BufRead> LookAheadByteRead for LookAheadByteReader<R> {
         Ok(())
     }
 
-    fn line_number(&self) -> usize {
+    fn line_number(&self) -> u64 {
         self.line_number
     }
 
-    fn byte_number(&self) -> usize {
+    fn byte_number(&self) -> u64 {
         self.byte_number
     }
 
@@ -232,7 +235,7 @@ impl StringBufferStack {
 #[derive(Default)]
 pub struct BlankNodeIdGenerator {
     //TODO: avoid collisions
-    counter: usize,
+    counter: u64,
 }
 
 impl BlankNodeIdGenerator {
@@ -241,12 +244,12 @@ impl BlankNodeIdGenerator {
             b'r', b'i', b'o', b'g', b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'0',
         ];
         self.counter += 1;
-        write_usize_to_slice(self.counter, &mut id[4..]);
+        write_u64_to_slice(self.counter, &mut id[4..]);
         BlankNodeId { id }
     }
 }
 
-fn write_usize_to_slice(mut v: usize, s: &mut [u8]) {
+fn write_u64_to_slice(mut v: u64, s: &mut [u8]) {
     for i in (0..s.len()).rev() {
         s[i] = b'0' + (v % 10) as u8;
         v /= 10;

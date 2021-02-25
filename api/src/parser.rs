@@ -5,13 +5,13 @@ pub use crate::generalized::parser::*;
 use crate::model::{Quad, Triple};
 use std::error::Error;
 
-/// A parser returning [`Triple`](../model/struct.Triple.html).
+/// A parser returning [`Triple`](super::model::Triple).
 pub trait TriplesParser: Sized {
     type Error: Error;
 
     /// Parses the complete file and calls `on_triple` each time a new triple is read.
     ///
-    /// May fail on errors caused by the parser itself or by the callback function ``on_triple``.
+    /// May fail on errors caused by the parser itself or by the callback function `on_triple`.
     fn parse_all<E: From<Self::Error>>(
         &mut self,
         on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
@@ -25,9 +25,9 @@ pub trait TriplesParser: Sized {
     /// Parses a small chunk of the file and calls `on_triple` each time a new triple is read.
     /// (A "small chunk" could be a line for an N-Triples parser.)
     ///
-    /// This method should be called as long as [`is_end`](#tymethod.is_end) returns false.
+    /// This method should be called as long as [`is_end`](TriplesParser::is_end) returns false.
     ///
-    /// It may fail on errors caused by the parser itself or by the callback function ``on_triple``.
+    /// It may fail on errors caused by the parser itself or by the callback function `on_triple`.
     fn parse_step<E: From<Self::Error>>(
         &mut self,
         on_triple: &mut impl FnMut(Triple<'_>) -> Result<(), E>,
@@ -38,7 +38,7 @@ pub trait TriplesParser: Sized {
 
     /// Converts the parser into a `Result<T, E>` iterator.
     ///
-    /// `convert_triple` is a function converting Rio [`Triple`](../model/struct.Triple.html) to `T`.
+    /// `convert_triple` is a function converting Rio [`Triple`](super::model::Triple) to `T`.
     fn into_iter<T, E: From<Self::Error>, F: FnMut(Triple<'_>) -> Result<T, E>>(
         self,
         convert_triple: F,
@@ -51,7 +51,7 @@ pub trait TriplesParser: Sized {
     }
 }
 
-/// Created with the method [`into_iter`](trait.TriplesParser.html#method.into_iter).
+/// Created with the method [`into_iter`](TriplesParser::into_iter()).
 pub struct TriplesParserIterator<
     T,
     E: From<P::Error>,
@@ -89,13 +89,13 @@ impl<T, E: From<P::Error>, F: FnMut(Triple<'_>) -> Result<T, E>, P: TriplesParse
     }
 }
 
-/// A parser returning [`Quad`](../model/struct.Quad.html).
+/// A parser returning [`Quad`](super::model::Quad).
 pub trait QuadsParser: Sized {
     type Error: Error;
 
     /// Parses the complete file and calls `on_quad` each time a new quad is read.
     ///
-    /// May fail on errors caused by the parser itself or by the callback function ``on_quad``.
+    /// May fails on errors caused by the parser itself or by the callback function `on_quad`.
     fn parse_all<E: From<Self::Error>>(
         &mut self,
         on_quad: &mut impl FnMut(Quad<'_>) -> Result<(), E>,
@@ -109,9 +109,9 @@ pub trait QuadsParser: Sized {
     /// Parses a small chunk of the file and calls `on_quad` each time a new quad is read.
     /// (A "small chunk" could be a line for an N-Quads parser.)
     ///
-    /// This method should be called as long as [`is_end`](#tymethod.is_end) returns false.
+    /// This method should be called as long as [`is_end`](QuadsParser::is_end) returns false.
     ///
-    /// May fail on errors caused by the parser itself or by the callback function ``on_quad``.
+    /// May fails on errors caused by the parser itself or by the callback function `on_quad`.
     fn parse_step<E: From<Self::Error>>(
         &mut self,
         on_quad: &mut impl FnMut(Quad<'_>) -> Result<(), E>,
@@ -122,7 +122,7 @@ pub trait QuadsParser: Sized {
 
     /// Converts the parser into a `Result<T, E>` iterator.
     ///
-    /// `convert_triple` is a function converting Rio [`Triple`](../model/struct.Triple.html) to `T`.
+    /// `convert_triple` is a function converting Rio [`Triple`](super::model::Triple) to `T`.
     fn into_iter<T, E: From<Self::Error>, F: FnMut(Quad<'_>) -> Result<T, E>>(
         self,
         convert_quad: F,
@@ -135,7 +135,7 @@ pub trait QuadsParser: Sized {
     }
 }
 
-/// Created with the method [`into_iter`](trait.QuadsParser.html#method.into_iter).
+/// Created with the method [`into_iter`](QuadsParser::into_iter()).
 pub struct QuadsParserIterator<
     T,
     E: From<P::Error>,
@@ -181,13 +181,13 @@ pub trait ParseError: Error {
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Hash)]
 pub struct LineBytePosition {
-    line_number: usize,
-    byte_number: usize,
+    line_number: u64,
+    byte_number: u64,
 }
 
 impl LineBytePosition {
     /// Creates a new position where `line_number` and `byte_number` are both starting from 1
-    pub fn new(line_number: usize, byte_number: usize) -> Self {
+    pub fn new(line_number: u64, byte_number: u64) -> Self {
         Self {
             line_number,
             byte_number,
@@ -195,12 +195,12 @@ impl LineBytePosition {
     }
 
     /// The line number where the error occurred starting from 0
-    pub fn line_number(&self) -> usize {
+    pub fn line_number(&self) -> u64 {
         self.line_number
     }
 
     /// The byte number where the error occurred starting from 0
-    pub fn byte_number(&self) -> usize {
+    pub fn byte_number(&self) -> u64 {
         self.byte_number
     }
 }
